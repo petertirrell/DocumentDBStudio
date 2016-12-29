@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //-----------------------------------------------------------------------------
 
+using System.Text;
+
 namespace Microsoft.Azure.DocumentDBStudio {
 	using System;
 	using System.Collections.Generic;
@@ -136,7 +138,7 @@ namespace Microsoft.Azure.DocumentDBStudio {
 
 			cbRunQueryForAllIterations = new CheckBox();
 			cbRunQueryForAllIterations.Text = "RunQueryForAllIterations";
-			cbRunQueryForAllIterations.CheckState = CheckState.Checked;
+			cbRunQueryForAllIterations.CheckState = CheckState.Indeterminate;
 			var host3 = new ToolStripControlHost(cbRunQueryForAllIterations);
 			feedToolStrip.Items.Insert(5, host3);
 
