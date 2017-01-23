@@ -401,8 +401,9 @@ namespace Microsoft.Azure.DocumentDBStudio
                 IDocumentQuery<dynamic> q = null;
 
                 var feedOptions = Program.GetMain().GetFeedOptions();
+					var continueIterations = Program.GetMain().GetRunFullQueryOption();
 
-                if (requestOptions == null)
+				if (requestOptions == null)
                 {
                     // requestOptions = null means it is from the next page. We only attempt to continue using the RequestContinuation for next page button
                     if (!string.IsNullOrEmpty(_currentContinuation) && string.IsNullOrEmpty(feedOptions.RequestContinuation))
@@ -415,51 +416,74 @@ namespace Microsoft.Azure.DocumentDBStudio
 
                 var sw = Stopwatch.StartNew();
 
-                FeedResponse<dynamic> r;
-                using (PerfStatus.Start("QueryDocument"))
-                {
-                    r = await q.ExecuteNextAsync();
-                }
-                sw.Stop();
-                _currentContinuation = r.ResponseContinuation;
-                _currentQueryCommandContext.HasContinuation = !string.IsNullOrEmpty(_currentContinuation);
+				var iterations = 0;
+				var documentsCount = 0;
+				var responseContinuation = "";
+				var responseHeaders = new NameValueCollection();
+
+				string jsonarray = "[";
+
+				FeedResponse<dynamic> r;
+				using (PerfStatus.Start("QueryDocument")) {
+					if (continueIterations) {
+						while (q.HasMoreResults) {
+							iterations++;
+							r = await q.ExecuteNextAsync();
+
+							documentsCount += r.Count;
+
+							responseContinuation = r.ResponseContinuation;
+							responseHeaders = r.ResponseHeaders;
+
+							int index = 0;
+							foreach (dynamic d in r) {
+								index++;
+								// currently Query.ToString() has Formatting.Indented, but the public release doesn't have yet.
+								jsonarray += d.ToString();
+
+								jsonarray += ",\r\n";
+							}
+						}
+					} else {
+						r = await q.ExecuteNextAsync();
+						documentsCount += r.Count;
+
+						responseContinuation = r.ResponseContinuation;
+						responseHeaders = r.ResponseHeaders;
+
+						int index = 0;
+						foreach (dynamic d in r) {
+							index++;
+							// currently Query.ToString() has Formatting.Indented, but the public release doesn't have yet.
+							jsonarray += d.ToString();
+
+							jsonarray += ",\r\n";
+						}
+					}
+				}
+
+				jsonarray += "]";
+
+				sw.Stop();
+				_currentContinuation = responseContinuation;
+				_currentQueryCommandContext.HasContinuation = !string.IsNullOrEmpty(_currentContinuation);
                 _currentQueryCommandContext.QueryStarted = true;
 
                 // set the result window
                 string text = null;
-                if (r.Count > 1)
-                {
-                    text = string.Format(CultureInfo.InvariantCulture, "Returned {0} documents in {1} ms.", r.Count, sw.ElapsedMilliseconds);
-                }
-                else
-                {
-                    text = string.Format(CultureInfo.InvariantCulture, "Returned {0} document in {1} ms.", r.Count, sw.ElapsedMilliseconds);
-                }
+				if (documentsCount > 1) {
+					text = string.Format(CultureInfo.InvariantCulture, "Returned {0} documents in {1} ms.", documentsCount, sw.ElapsedMilliseconds);
+				} else {
+					text = string.Format(CultureInfo.InvariantCulture, "Returned {0} document in {1} ms.", documentsCount, sw.ElapsedMilliseconds);
+				}
 
-                if (r.ResponseContinuation != null)
-                {
-                    text += " (more results might be available)";
-                }
+				if (!string.IsNullOrEmpty(responseContinuation)) {
+					text += " (more results might be available)";
+				}
 
-                var jsonarray = "[";
-                var index = 0;
-                foreach (var d in r)
-                {
-                    index++;
-                    // currently Query.ToString() has Formatting.Indented, but the public release doesn't have yet.
-                    jsonarray += d.ToString();
-
-                    if (index == r.Count)
-                    {
-                        jsonarray += "]";
-                    }
-                    else
-                    {
-                        jsonarray += ",\r\n";
-                    }
-                }
-
-                Program.GetMain().SetResultInBrowser(jsonarray, text, true, r.ResponseHeaders);
+				text += $" ({iterations} iterations)";
+				
+                Program.GetMain().SetResultInBrowser(jsonarray, text, true, responseHeaders);
                 Program.GetMain().SetNextPageVisibility(_currentQueryCommandContext);
             }
             catch (AggregateException e)

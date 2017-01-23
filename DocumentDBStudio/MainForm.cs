@@ -42,8 +42,9 @@ namespace Microsoft.Azure.DocumentDBStudio
         private RequestOptions requestOptions;
         CheckBox cbEnableScan;
         CheckBox cbEnableCrossPartitionQuery;
+		CheckBox cbRunQueryForAllIterations;
 
-        private DocumentCollection newDocumentCollection;
+		private DocumentCollection newDocumentCollection;
 
         private OperationType operationType;
         private ResourceType resourceType;
@@ -126,7 +127,13 @@ namespace Microsoft.Azure.DocumentDBStudio
             ToolStripControlHost host2 = new ToolStripControlHost(cbEnableCrossPartitionQuery);
             feedToolStrip.Items.Insert(4, host2);
 
-            lbIncludedPath.Items.Add(new IncludedPath() { Path = "/" });
+			cbRunQueryForAllIterations = new CheckBox();
+			cbRunQueryForAllIterations.Text = "RunQueryForAllIterations";
+			cbRunQueryForAllIterations.CheckState = CheckState.Indeterminate;
+			var host3 = new ToolStripControlHost(cbRunQueryForAllIterations);
+			feedToolStrip.Items.Insert(5, host3);
+
+			lbIncludedPath.Items.Add(new IncludedPath() { Path = "/" });
 
             offerType = OfferType.StandardSingle;
             tbThroughput.Text = "400";
@@ -551,7 +558,17 @@ namespace Microsoft.Azure.DocumentDBStudio
             return feedOptions;
         }
 
-        public RequestOptions GetRequestOptions()
+		public bool GetRunFullQueryOption() {
+			if (cbRunQueryForAllIterations.CheckState == CheckState.Checked) {
+				return true;
+			}
+			if (cbRunQueryForAllIterations.CheckState == CheckState.Unchecked) {
+				return false;
+			}
+			return false;
+		}
+
+		public RequestOptions GetRequestOptions()
         {
             if (tbPostTrigger.Modified)
             {
