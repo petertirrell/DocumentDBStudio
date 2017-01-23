@@ -27,7 +27,7 @@ namespace Microsoft.Azure.DocumentDBStudio
                 _contextMenu.MenuItems.Add(menuItem);
             }
             {
-                var menuItem = new MenuItem("Create StoredProcedure From File");
+                var menuItem = new MenuItem("Create StoredProcedure from File");
                 menuItem.Click += myMenuItemCreateStoredProcedureFromFile_Click;
                 _contextMenu.MenuItems.Add(menuItem);
             }
@@ -131,5 +131,14 @@ namespace Microsoft.Azure.DocumentDBStudio
                 Program.GetMain().SetResultInBrowser(null, e.ToString(), true);
             }
         }
+
+        public override void HandleNodeKeyDown(object sender, KeyEventArgs keyEventArgs)
+        {
+        }
+
+        public override void HandleNodeKeyPress(object sender, KeyPressEventArgs keyPressEventArgs)
+        {
+        }
+
     }
 }

@@ -250,6 +250,9 @@ namespace Microsoft.Azure.DocumentDBStudio
             this.treeView1.TabIndex = 0;
             this.treeView1.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView1_BeforeExpand);
             this.treeView1.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseClick);
+            this.treeView1.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.treeView1_NodeKeyPress);
+            this.treeView1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.treeView1_NodeKeyDown);
+
             // 
             // splitContainerInner
             // 
@@ -1246,7 +1249,7 @@ namespace Microsoft.Azure.DocumentDBStudio
             this.tsbHideDocumentSystemProperties.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.tsbHideDocumentSystemProperties.Name = "tsbHideDocumentSystemProperties";
             this.tsbHideDocumentSystemProperties.Size = new System.Drawing.Size(106, 22);
-            this.tsbHideDocumentSystemProperties.Text = "Show SysProperties";
+            this.tsbHideDocumentSystemProperties.Text = "Show System resources";
             this.tsbHideDocumentSystemProperties.Click += new System.EventHandler(this.tsbHideDocumentSystemProperties_Click);
             // 
             // tsAddress

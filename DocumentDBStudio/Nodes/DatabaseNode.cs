@@ -28,20 +28,35 @@ namespace Microsoft.Azure.DocumentDBStudio
             Nodes.Add(new UserNode(_client));
 
             AddMenuItem("Read Database", myMenuItemReadDatabase_Click);
-            AddMenuItem("Delete Database", myMenuItemDeleteDatabase_Click);
+            AddMenuItem("Delete Database", myMenuItemDeleteDatabase_Click, Shortcut.Del);
 
             _contextMenu.MenuItems.Add("-");
 
-            AddMenuItem("Create DocumentCollection", myMenuItemCreateDocumentCollection_Click);
-            AddMenuItem("Refresh DocumentCollections Feed", (sender, e) => Refresh(true));
-            AddMenuItem("Query DocumentCollections", myMenuItemQueryDocumentCollection_Click);
+            AddMenuItem("Create DocumentCollection", myMenuItemCreateDocumentCollection_Click, Shortcut.CtrlN);
+            AddMenuItem("Refresh DocumentCollections Feed", (sender, e) => Refresh(true), Shortcut.F5);
+            AddMenuItem("Query DocumentCollections", myMenuItemQueryDocumentCollection_Click, Shortcut.CtrlQ);
+
+            _contextMenu.MenuItems.Add("-");
+            AddMenuItem("Collapse all", myMenuItemCollapseAll_Click);
         }
 
-        private void AddMenuItem(string menuItemText, EventHandler eventHandler)
+        private void myMenuItemCollapseAll_Click(object sender, EventArgs e)
+        {
+            this.Collapse();
+        }
+
+        private MenuItem AddMenuItem(string menuItemText, EventHandler eventHandler, Shortcut shortcut = Shortcut.None)
         {
             var menuItem = new MenuItem(menuItemText);
             menuItem.Click += eventHandler;
+            if (shortcut != Shortcut.None)
+            {
+                menuItem.Shortcut = shortcut;
+            }
+
             _contextMenu.MenuItems.Add(menuItem);
+
+            return menuItem;
         }
 
         async void myMenuItemReadDatabase_Click(object sender, EventArgs eArgs)
@@ -71,13 +86,19 @@ namespace Microsoft.Azure.DocumentDBStudio
 
         void myMenuItemQueryDocumentCollection_Click(object sender, EventArgs e)
         {
-            _currentQueryCommandContext = new CommandContext();
-            _currentQueryCommandContext.IsFeed = true;
+            InvokeQueryDocumentCollection();
+        }
+
+        private void InvokeQueryDocumentCollection()
+        {
+            _currentQueryCommandContext = new CommandContext {IsFeed = true};
 
             // reset continuation token
             _currentContinuation = null;
 
-            Program.GetMain().SetCrudContext(this, OperationType.Query, ResourceType.Document, "select * from c", QueryDocumentCollectionsAsync, _currentQueryCommandContext);
+            Program.GetMain()
+                .SetCrudContext(this, OperationType.Query, ResourceType.Document, "select * from c",
+                    QueryDocumentCollectionsAsync, _currentQueryCommandContext);
         }
 
         async void QueryDocumentCollectionsAsync(object resource, RequestOptions requestOptions)
@@ -163,19 +184,29 @@ namespace Microsoft.Azure.DocumentDBStudio
 
         void myMenuItemDeleteDatabase_Click(object sender, EventArgs e)
         {
-            var x = Tag.ToString();
-            var context = new CommandContext();
-            context.IsDelete = true;
-            Program.GetMain().SetCrudContext(this, OperationType.Delete, ResourceType.Database, x, DeleteDatabaseAsync, context);
+            InvokeDeleteDatabase();
+        }
+
+        private void InvokeDeleteDatabase()
+        {
+            var bodytext = Tag.ToString();
+            var context = new CommandContext {IsDelete = true};
+            Program.GetMain().SetCrudContext(this, OperationType.Delete, ResourceType.Database, bodytext, DeleteDatabaseAsync, context);
         }
 
         void myMenuItemCreateDocumentCollection_Click(object sender, EventArgs e)
+        {
+            InvokeCreateDocumentCollection();
+        }
+
+        private void InvokeCreateDocumentCollection()
         {
             dynamic d = new System.Dynamic.ExpandoObject();
             d.id = "Here is your DocumentCollection Id";
 
             string x = JsonConvert.SerializeObject(d, Formatting.Indented);
-            Program.GetMain().SetCrudContext(this, OperationType.Create, ResourceType.DocumentCollection, x, CreateDocumentCollectionAsync);
+            Program.GetMain()
+                .SetCrudContext(this, OperationType.Create, ResourceType.DocumentCollection, x, CreateDocumentCollectionAsync);
         }
 
         public override void ShowContextMenu(TreeView treeview, Point p)
@@ -202,6 +233,7 @@ namespace Microsoft.Azure.DocumentDBStudio
             {
                 var coll = resource as DocumentCollection;
                 var db = (Database)Tag;
+                var dbId = db.Id;
                 ResourceResponse<DocumentCollection> newcoll;
                 using (PerfStatus.Start("CreateDocumentCollection"))
                 {
@@ -213,7 +245,7 @@ namespace Microsoft.Azure.DocumentDBStudio
 
                 Program.GetMain().SetResultInBrowser(json, null, false, newcoll.ResponseHeaders);
 
-                Nodes.Add(new DocumentCollectionNode(_client, newcoll.Resource));
+                Nodes.Add(new DocumentCollectionNode(_client, newcoll.Resource, dbId));
             }
             catch (AggregateException e)
             {
@@ -255,14 +287,16 @@ namespace Microsoft.Azure.DocumentDBStudio
             try
             {
                 FeedResponse<DocumentCollection> colls;
+                var db = (Database) Tag;
+                var dbId = db.Id;
                 using (PerfStatus.Start("ReadDocumentCollectionFeed"))
                 {
-                    colls = await _client.ReadDocumentCollectionFeedAsync(((Database)Tag).GetLink(_client));
+                    colls = await _client.ReadDocumentCollectionFeedAsync(db.GetLink(_client));
                 }
 
                 foreach (var coll in colls)
                 {
-                    var node = new DocumentCollectionNode(_client, coll);
+                    var node = new DocumentCollectionNode(_client, coll, dbId);
                     Nodes.Add(node);
                 }
 
@@ -277,5 +311,35 @@ namespace Microsoft.Azure.DocumentDBStudio
                 Program.GetMain().SetResultInBrowser(null, e.ToString(), true);
             }
         }
+
+        public override void HandleNodeKeyDown(object sender, KeyEventArgs keyEventArgs)
+        {
+            var kv = keyEventArgs.KeyValue;
+            var ctrl = keyEventArgs.Control;
+
+            if (kv == 46) // del
+            {
+                InvokeDeleteDatabase();
+            }
+
+            if (kv == 116) // F5
+            {
+                Refresh(true);
+            }
+
+            if (ctrl && kv == 78) // ctrl+n
+            {
+                InvokeCreateDocumentCollection();
+            } 
+            if (ctrl && kv == 81) // ctrl+q
+            {
+                InvokeQueryDocumentCollection();
+            }
+        }
+
+        public override void HandleNodeKeyPress(object sender, KeyPressEventArgs keyPressEventArgs)
+        {
+        }
+
     }
 }
